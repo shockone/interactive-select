@@ -8,9 +8,15 @@ import System.Console.Terminal.Size
 import Data.Maybe (fromMaybe)
 
 type Current = Bool
-data Line = Line String Current
+data InteractivelySelectable a => Line a = Line a Current
 
-oneOf :: [String] -> IO String
+class InteractivelySelectable a where
+    showOption :: a -> String
+
+instance InteractivelySelectable String where
+    showOption = id
+
+oneOf :: InteractivelySelectable options => [options] -> IO String
 oneOf allLines@(firstLine:restOfLines) = do
     handle <- tty
     hSetBuffering handle NoBuffering
@@ -27,10 +33,10 @@ tty :: IO Handle
 tty = openFile "/dev/tty" ReadWriteMode
 
 
-printLine :: Line -> IO ()
-printLine (Line string isCurrent) = do
+printLine :: InteractivelySelectable a => Line a -> IO ()
+printLine (Line option isCurrent) = do
     handle <- tty
-    paddedString <- pad handle string
+    paddedString <- pad handle (showOption option)
     hSetSGR handle [sgr isCurrent]
     hprint handle "{}\n" $ Only paddedString
 
