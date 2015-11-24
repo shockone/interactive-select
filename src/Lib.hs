@@ -7,14 +7,11 @@ import Data.Text.Format
 import System.Console.Terminal.Size
 import Data.Maybe (fromMaybe)
 
-type IsCurrent = Bool
-
-data Option a => Line a = Line a IsCurrent
-data Option a => Options a = Options { getAboveScreen :: [Line a]
-                                     , getAboveCurrent :: [Line a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
-                                     , getCurrent :: Line a
-                                     , getBelowCurrent :: [Line a]
-                                     , getBelowScreen :: [Line a]
+data Option a => Options a = Options { getAboveScreen :: [a]
+                                     , getAboveCurrent :: [a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
+                                     , getCurrent :: a
+                                     , getBelowCurrent :: [a]
+                                     , getBelowScreen :: [a]
                                      }
 
 class Option a where
@@ -49,11 +46,9 @@ moveDown n options = undefined
 buildOptions :: Option option => [option] -> Int -> Options option
 buildOptions [] _ = undefined -- FIXME: handle this case properly.
 buildOptions options@(headOption:tailOptions) terminalHeight =
-    Options [] [] current (map toNotCurrentLine (take belowLength tailOptions)) (map toNotCurrentLine (drop belowLength tailOptions))
-    where current = Line headOption True
-          belowLength | length options <= terminalHeight = length options - 1
+    Options [] [] headOption (take belowLength tailOptions) (drop belowLength tailOptions)
+    where belowLength | length options <= terminalHeight = length options - 1
                       | otherwise                        = terminalHeight - 1
-          toNotCurrentLine = (`Line` False)
 
 
 tty :: IO Handle
@@ -66,20 +61,20 @@ printOptions :: Option a
              -> Options a -- Next version
              -> IO ()
 printOptions Nothing options = do
-    mapM_ printLine (getAboveCurrent options)
-    printLine (getCurrent options)
-    mapM_ printLine (getBelowCurrent options)
+    mapM_ (printLine False) (getAboveCurrent options)
+    printLine True $ getCurrent options
+    mapM_ (printLine False) (getBelowCurrent options)
 
 
-printLine :: Option a => Line a -> IO ()
-printLine (Line option isCurrent) = do
+printLine :: Option a => Bool -> a -> IO ()
+printLine highlight option = do
     handle <- tty
     paddedString <- pad handle (showOption option)
-    hSetSGR handle [sgr isCurrent]
+    hSetSGR handle [sgr highlight]
     hprint handle "{}\n" $ Only paddedString
 
 
-sgr :: IsCurrent -> SGR
+sgr :: Bool -> SGR
 sgr True = SetSwapForegroundBackground True
 sgr False = Reset
 
