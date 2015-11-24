@@ -9,36 +9,44 @@ import Data.Maybe (fromMaybe)
 
 type IsCurrent = Bool
 
-data InteractivelySelectable a => Line a = Line a IsCurrent
-data InteractivelySelectable a => Options a = Options { getAboveScreen :: [Line a]
-                                                      , getAboveCurrent :: [Line a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
-                                                      , getCurrent :: Line a
-                                                      , getBelowCurrent :: [Line a]
-                                                      , getBelowScreen :: [Line a]
-                                                      }
+data Option a => Line a = Line a IsCurrent
+data Option a => Options a = Options { getAboveScreen :: [Line a]
+                                     , getAboveCurrent :: [Line a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
+                                     , getCurrent :: Line a
+                                     , getBelowCurrent :: [Line a]
+                                     , getBelowScreen :: [Line a]
+                                     }
 
-class InteractivelySelectable a where
+class Option a where
     showOption :: a -> String
 
-instance InteractivelySelectable String where
+instance Option String where
     showOption = id
 
-oneOf :: InteractivelySelectable options => [options] -> IO String
+oneOf :: Option options => [options] -> IO String
 oneOf lines = do
     handle <- tty
 
     hSetBuffering handle NoBuffering
     hSetEcho handle False
 
-    buildOptions lines <$> getTerminalHeight handle >>= printOptions
+    options <- buildOptions lines <$> getTerminalHeight handle
+    printOptions Nothing options
     hCursorUpLine handle (length lines)
 
     char <- hGetChar handle
+    case char of
+        'j' -> moveDown 1 options
+
     hClose handle
     return.show $ char
 
 
-buildOptions :: (InteractivelySelectable option) => [option] -> Int -> Options option
+moveDown :: Option option => Int -> Options option -> IO (Options option)
+moveDown n options = undefined
+
+
+buildOptions :: Option option => [option] -> Int -> Options option
 buildOptions [] _ = undefined -- FIXME: handle this case properly.
 buildOptions options@(headOption:tailOptions) terminalHeight =
     Options [] [] current (map toNotCurrentLine (take belowLength tailOptions)) (map toNotCurrentLine (drop belowLength tailOptions))
@@ -53,14 +61,17 @@ tty = openFile "/dev/tty" ReadWriteMode
 
 
 -- FIXME: Rewrite after adding VisibleOptions.
-printOptions :: InteractivelySelectable a => Options a -> IO ()
-printOptions options = do
+printOptions :: Option a
+             => Maybe (Options a) -- Current version
+             -> Options a -- Next version
+             -> IO ()
+printOptions Nothing options = do
     mapM_ printLine (getAboveCurrent options)
     printLine (getCurrent options)
     mapM_ printLine (getBelowCurrent options)
 
 
-printLine :: InteractivelySelectable a => Line a -> IO ()
+printLine :: Option a => Line a -> IO ()
 printLine (Line option isCurrent) = do
     handle <- tty
     paddedString <- pad handle (showOption option)
