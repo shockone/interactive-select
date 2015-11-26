@@ -48,11 +48,13 @@ listenToKeyboard handle options = do
 
 moveDown, moveUp :: Option option => Options option -> Options option
 
+moveDown options@(Options _ _ _ [] []) = options
 moveDown options@(Options _ above current (headBelow:restBelow) _) = options { getAboveCurrent = above ++ [current]
                                                                              , getCurrent = headBelow
                                                                              , getBelowCurrent = restBelow
                                                                              }
 
+moveUp options@(Options [] [] _ _ _) = options
 moveUp options@(Options _ above current below _) = options { getAboveCurrent = init above
                                                            , getCurrent = last above
                                                            , getBelowCurrent = current:below
