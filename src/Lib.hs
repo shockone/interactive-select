@@ -12,9 +12,9 @@ data Option a => Options a = Options { getAboveScreen :: [a]
                                      , getCurrent :: a
                                      , getBelowCurrent :: [a]
                                      , getBelowScreen :: [a]
-                                     }
+                                     } deriving Eq
 
-class Option a where
+class Eq a => Option a where
     showOption :: a -> String
 
 instance Option String where
@@ -29,18 +29,34 @@ oneOf lines = do
 
     options <- buildOptions lines <$> getTerminalHeight handle
     printOptions Nothing options
-    hCursorUpLine handle (length lines)
 
-    char <- hGetChar handle
-    case char of
-        'j' -> moveDown 1 options
+    listenToKeyboard handle options
 
     hClose handle
-    return.show $ char
+    return "The End."
 
 
-moveDown :: Option option => Int -> Options option -> IO (Options option)
-moveDown n options = undefined
+listenToKeyboard :: Option o => Handle -> Options o -> IO ()
+listenToKeyboard handle options = do
+    char <- hGetChar handle
+    case char of
+        'j' -> let nextOptions = moveDown options in printOptions (Just options) nextOptions >> listenToKeyboard handle nextOptions
+        'k' -> let nextOptions = moveUp options in printOptions (Just options) nextOptions >> listenToKeyboard handle nextOptions
+        _ -> return ()
+
+
+
+moveDown, moveUp :: Option option => Options option -> Options option
+
+moveDown options@(Options _ above current (headBelow:restBelow) _) = options { getAboveCurrent = above ++ [current]
+                                                                             , getCurrent = headBelow
+                                                                             , getBelowCurrent = restBelow
+                                                                             }
+
+moveUp options@(Options _ above current below _) = options { getAboveCurrent = init above
+                                                           , getCurrent = last above
+                                                           , getBelowCurrent = current:below
+                                                           }
 
 
 buildOptions :: Option option => [option] -> Int -> Options option
@@ -60,11 +76,22 @@ printOptions :: Option a
              => Maybe (Options a) -- Current version
              -> Options a -- Next version
              -> IO ()
-printOptions Nothing options = do
-    mapM_ (printLine False) (getAboveCurrent options)
-    printLine True $ getCurrent options
-    mapM_ (printLine False) (getBelowCurrent options)
-
+printOptions Nothing (Options _ above current below _) = do
+    handle <- tty
+    hCursorUpLine handle $ length above + length below + 1
+    mapM_ (printLine False) above
+    printLine True current
+    mapM_ (printLine False) below
+printOptions (Just currentOptions) nextOptions
+    | currentOptions == nextOptions = return ()
+    | otherwise = do
+        handle <- tty
+        printLine False (getCurrent currentOptions)
+        hCursorUpLine handle 1
+        hCursorMoveLinewise handle linesToMove
+        printLine True (getCurrent nextOptions)
+        hCursorUpLine handle 1
+    where linesToMove = length (getAboveCurrent nextOptions) - length (getAboveCurrent currentOptions)
 
 printLine :: Option a => Bool -> a -> IO ()
 printLine highlight option = do
@@ -94,3 +121,11 @@ getTerminalHeight handle = extractHeight <$> hSize handle
 
 
 defaultTerminalWindow = Window 24 80
+
+
+hCursorMoveLinewise :: Handle -> Int -> IO ()
+hCursorMoveLinewise handle n
+    | n == 0 = return ()
+    | n < 0 = hCursorUpLine handle (-n)
+    | n > 0 = hCursorDownLine handle n
+    | otherwise = hCursorDownLine handle n
