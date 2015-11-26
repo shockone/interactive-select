@@ -78,24 +78,22 @@ hPrintOptions :: Option a
              -> Options a -- Next version
              -> IO ()
 hPrintOptions handle Nothing (Options _ above current below _) = do
-    handle <- tty
+    mapM_ (hPrintLine handle False) above
+    hPrintLine handle True current
+    mapM_ (hPrintLine handle False) below
     hCursorUpLine handle $ length above + length below + 1
-    mapM_ (printLine False) above
-    printLine True current
-    mapM_ (printLine False) below
 hPrintOptions handle (Just currentOptions) nextOptions
     | currentOptions == nextOptions = return ()
     | otherwise = do
-        printLine False (getCurrent currentOptions)
+        hPrintLine handle False (getCurrent currentOptions)
         hCursorUpLine handle 1
         hCursorMoveLinewise handle linesToMove
-        printLine True (getCurrent nextOptions)
+        hPrintLine handle True (getCurrent nextOptions)
         hCursorUpLine handle 1
     where linesToMove = length (getAboveCurrent nextOptions) - length (getAboveCurrent currentOptions)
 
-printLine :: Option a => Bool -> a -> IO ()
-printLine highlight option = do
-    handle <- tty
+hPrintLine :: Option a => Handle -> Bool -> a -> IO ()
+hPrintLine handle highlight option = do
     paddedString <- pad handle (showOption option)
     hSetSGR handle [sgr highlight]
     hprint handle "{}\n" $ Only paddedString
