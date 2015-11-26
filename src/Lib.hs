@@ -28,7 +28,7 @@ oneOf lines = do
     hSetEcho handle False
 
     options <- buildOptions lines <$> getTerminalHeight handle
-    printOptions Nothing options
+    hPrintOptions handle Nothing options
 
     listenToKeyboard handle options
 
@@ -40,8 +40,8 @@ listenToKeyboard :: Option o => Handle -> Options o -> IO ()
 listenToKeyboard handle options = do
     char <- hGetChar handle
     case char of
-        'j' -> let nextOptions = moveDown options in printOptions (Just options) nextOptions >> listenToKeyboard handle nextOptions
-        'k' -> let nextOptions = moveUp options in printOptions (Just options) nextOptions >> listenToKeyboard handle nextOptions
+        'j' -> let nextOptions = moveDown options in hPrintOptions handle (Just options) nextOptions >> listenToKeyboard handle nextOptions
+        'k' -> let nextOptions = moveUp options in hPrintOptions handle (Just options) nextOptions >> listenToKeyboard handle nextOptions
         _ -> return ()
 
 
@@ -72,20 +72,20 @@ tty = openFile "/dev/tty" ReadWriteMode
 
 
 -- FIXME: Rewrite after adding VisibleOptions.
-printOptions :: Option a
-             => Maybe (Options a) -- Current version
+hPrintOptions :: Option a
+             => Handle
+             -> Maybe (Options a) -- Current version
              -> Options a -- Next version
              -> IO ()
-printOptions Nothing (Options _ above current below _) = do
+hPrintOptions handle Nothing (Options _ above current below _) = do
     handle <- tty
     hCursorUpLine handle $ length above + length below + 1
     mapM_ (printLine False) above
     printLine True current
     mapM_ (printLine False) below
-printOptions (Just currentOptions) nextOptions
+hPrintOptions handle (Just currentOptions) nextOptions
     | currentOptions == nextOptions = return ()
     | otherwise = do
-        handle <- tty
         printLine False (getCurrent currentOptions)
         hCursorUpLine handle 1
         hCursorMoveLinewise handle linesToMove
