@@ -20,9 +20,11 @@ class Eq a => Option a where
 instance Option String where
     showOption = id
 
+
 oneOf :: Option option => [option] -> IO option
 oneOf lines = do
     handle <- tty
+    hPrintHelpMessage handle
 
     options <- buildOptions lines <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
@@ -98,6 +100,7 @@ hPrintOptions handle (Just currentOptions) nextOptions
         hCursorUpLine handle 1
     where linesToMove = length (getAboveCurrent nextOptions) - length (getAboveCurrent currentOptions)
 
+
 hPrintLine :: Option a => Handle -> Bool -> a -> IO ()
 hPrintLine handle highlight option = do
     paddedString <- pad handle (showOption option)
@@ -133,3 +136,9 @@ hCursorMoveLinewise handle n
     | n < 0 = hCursorUpLine handle (-n)
     | n > 0 = hCursorDownLine handle n
     | otherwise = hCursorDownLine handle n
+
+
+hPrintHelpMessage handle = do
+    hSetSGR handle [SetColor Foreground Dull Yellow]
+    hPutStrLn handle "Use j/k to move and Return to choose"
+    hSetSGR handle [Reset]
