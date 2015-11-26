@@ -24,9 +24,6 @@ oneOf :: Option options => [options] -> IO String
 oneOf lines = do
     handle <- tty
 
-    hSetBuffering handle NoBuffering
-    hSetEcho handle False
-
     options <- buildOptions lines <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
@@ -70,7 +67,13 @@ buildOptions options@(headOption:tailOptions) terminalHeight =
 
 
 tty :: IO Handle
-tty = openFile "/dev/tty" ReadWriteMode
+tty = do
+    handle <- openFile "/dev/tty" ReadWriteMode
+
+    hSetBuffering handle NoBuffering
+    hSetEcho handle False
+
+    return handle
 
 
 -- FIXME: Rewrite after adding VisibleOptions.
