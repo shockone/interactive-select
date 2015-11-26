@@ -20,26 +20,27 @@ class Eq a => Option a where
 instance Option String where
     showOption = id
 
-oneOf :: Option options => [options] -> IO String
+oneOf :: Option option => [option] -> IO option
 oneOf lines = do
     handle <- tty
 
     options <- buildOptions lines <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
-    listenToKeyboard handle options
+    chosen <- askToChoose handle options
 
     hClose handle
-    return "The End."
+    return chosen
 
 
-listenToKeyboard :: Option o => Handle -> Options o -> IO ()
-listenToKeyboard handle options = do
+askToChoose :: Option o => Handle -> Options o -> IO o
+askToChoose handle options = do
     char <- hGetChar handle
     case char of
-        'j' -> let nextOptions = moveDown options in hPrintOptions handle (Just options) nextOptions >> listenToKeyboard handle nextOptions
-        'k' -> let nextOptions = moveUp options in hPrintOptions handle (Just options) nextOptions >> listenToKeyboard handle nextOptions
-        _ -> return ()
+        'j' -> let nextOptions = moveDown options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
+        'k' -> let nextOptions = moveUp options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
+        '\r' -> hCursorMoveLinewise handle (length (getBelowCurrent options) + 1) >> hSetSGR handle [sgr False] >> return (getCurrent options)
+        _ -> askToChoose handle options
 
 
 
