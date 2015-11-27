@@ -7,12 +7,12 @@ import Data.Text.Format
 import System.Console.Terminal.Size
 import Data.Maybe (fromMaybe)
 
-data Option a => Options a = Options { getAboveScreen :: [a]
-                                     , getAboveCurrent :: [a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
-                                     , getCurrent :: a
-                                     , getBelowCurrent :: [a]
-                                     , getBelowScreen :: [a]
-                                     } deriving Eq
+data Option a => OptionsList a = OptionList { getAboveScreen :: [a]
+                                            , getAboveCurrent :: [a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
+                                            , getCurrent :: a
+                                            , getBelowCurrent :: [a]
+                                            , getBelowScreen :: [a]
+                                            } deriving Eq
 
 data Option o => TogglableOption o = TogglableOption o Bool deriving Eq
 
@@ -43,7 +43,7 @@ manyOf lines = do
     return (map getOption (filter isChosen (fromOptions options)))
 
 
-selectInteractively :: Option o => [o] -> String -> IO (Options o)
+selectInteractively :: Option o => [o] -> String -> IO (OptionsList o)
 selectInteractively options message = do
     handle <- tty
     hPrintHelpMessage handle message
@@ -62,7 +62,7 @@ isChosen (TogglableOption _ True) = True
 isChosen (TogglableOption _ False) = False
 
 
-askToChoose :: Option o => Handle -> Options o -> IO (Options o)
+askToChoose :: Option o => Handle -> OptionsList o -> IO (OptionsList o)
 askToChoose handle options = do
     char <- hGetChar handle
     case char of
@@ -74,31 +74,31 @@ askToChoose handle options = do
 
 
 
-moveDown, moveUp :: Option option => Options option -> Options option
+moveDown, moveUp :: Option option => OptionsList option -> OptionsList option
 
-moveDown options@(Options _ _ _ [] []) = options
-moveDown options@(Options _ above current (headBelow:restBelow) _) = options { getAboveCurrent = above ++ [current]
+moveDown options@(OptionList _ _ _ [] []) = options
+moveDown options@(OptionList _ above current (headBelow:restBelow) _) = options { getAboveCurrent = above ++ [current]
                                                                              , getCurrent = headBelow
                                                                              , getBelowCurrent = restBelow
                                                                              }
 
-moveUp options@(Options [] [] _ _ _) = options
-moveUp options@(Options _ above current below _) = options { getAboveCurrent = init above
+moveUp options@(OptionList [] [] _ _ _) = options
+moveUp options@(OptionList _ above current below _) = options { getAboveCurrent = init above
                                                            , getCurrent = last above
                                                            , getBelowCurrent = current:below
                                                            }
 
 
-toOptions :: Option option => [option] -> Int -> Options option
+toOptions :: Option option => [option] -> Int -> OptionsList option
 toOptions [] _ = undefined -- FIXME: handle this case properly.
 toOptions options@(headOption:tailOptions) terminalHeight =
-    Options [] [] headOption (take belowLength tailOptions) (drop belowLength tailOptions)
+    OptionList [] [] headOption (take belowLength tailOptions) (drop belowLength tailOptions)
     where belowLength | length options <= terminalHeight = length options - 1
                       | otherwise                        = terminalHeight - 1
 
 
-fromOptions :: Option o => Options (TogglableOption o) -> [TogglableOption o]
-fromOptions (Options aboveScreen above current below belowScreen) = aboveScreen ++ above ++ [current] ++ below ++ belowScreen
+fromOptions :: Option o => OptionsList (TogglableOption o) -> [TogglableOption o]
+fromOptions (OptionList aboveScreen above current below belowScreen) = aboveScreen ++ above ++ [current] ++ below ++ belowScreen
 
 tty :: IO Handle
 tty = do
@@ -113,10 +113,10 @@ tty = do
 -- FIXME: Rewrite after adding VisibleOptions.
 hPrintOptions :: Option a
              => Handle
-             -> Maybe (Options a) -- Current version
-             -> Options a -- Next version
+             -> Maybe (OptionsList a) -- Current version
+             -> OptionsList a -- Next version
              -> IO ()
-hPrintOptions handle Nothing (Options _ above current below _) = do
+hPrintOptions handle Nothing (OptionList _ above current below _) = do
     mapM_ (hPrintLine handle False) above
     hPrintLine handle True current
     mapM_ (hPrintLine handle False) below
