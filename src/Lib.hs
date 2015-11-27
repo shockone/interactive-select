@@ -15,21 +15,19 @@ oneOf rows = getCurrent <$> selectInteractively rows "Use j/k to move and Return
 manyOf :: Option option => [option] -> IO [option]
 manyOf rows = do
     options <- selectInteractively (map (`TogglableOption` False) rows) "Use j/k to move, Space to toggle and Return to choose."
-    return (map getOption (filter isChosen (fromOptions options)))
+    return (map getOption (filter isChosen (fromOptionList options)))
 
 
 selectInteractively :: Option o => [o] -> String -> IO (OptionsList o)
-selectInteractively options message = do
+selectInteractively rows message = do
     handle <- tty
+    options <- toOptionList rows <$> getTerminalHeight handle
+
     hPrintHelpMessage handle message
-
-    options <- toOptions options <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
-
     finalOptions <- askToChoose handle options
 
     hClose handle
-
     return finalOptions
 
 isChosen :: Option o => TogglableOption o -> Bool
@@ -63,17 +61,6 @@ moveUp options@(OptionList _ above current below _) = options { getAboveCurrent 
                                                            , getBelowCurrent = current:below
                                                            }
 
-
-toOptions :: Option option => [option] -> Int -> OptionsList option
-toOptions [] _ = undefined -- FIXME: handle this case properly.
-toOptions options@(headOption:tailOptions) terminalHeight =
-    OptionList [] [] headOption (take belowLength tailOptions) (drop belowLength tailOptions)
-    where belowLength | length options <= terminalHeight = length options - 1
-                      | otherwise                        = terminalHeight - 1
-
-
-fromOptions :: Option o => OptionsList (TogglableOption o) -> [TogglableOption o]
-fromOptions (OptionList aboveScreen above current below belowScreen) = aboveScreen ++ above ++ [current] ++ below ++ belowScreen
 
 tty :: IO Handle
 tty = do
