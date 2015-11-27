@@ -45,11 +45,14 @@ askToChoose :: Option o => Handle -> OptionsList o -> IO (OptionsList o)
 askToChoose handle options = do
     char <- hGetChar handle
     case char of
-        'j' -> let nextOptions = moveDown options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
-        'k' -> let nextOptions = moveUp options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
-        ' ' -> let nextOptions = options { getCurrent = toggle (getCurrent options) } in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
-        '\n' -> hCursorMoveLinewise handle (length (getBelowCurrent options) + 1) >> hSetSGR handle [sgr False] >> return options
+        'j'  -> recurse $ moveDown options
+        'k'  -> recurse $ moveUp options
+        ' '  -> recurse $ options { getCurrent = toggle (getCurrent options) }
+        '\n' -> goToEnd >> resetSGR >> return options
         _ -> askToChoose handle options
+    where recurse nextOptions = hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
+          goToEnd = hCursorMoveLinewise handle (length (getBelowCurrent options) + 1)
+          resetSGR = hSetSGR handle [sgr False]
 
 
 
@@ -59,6 +62,7 @@ moveDown options@(OptionList _ above current (headBelow:restBelow) _) = options 
                                                                              , getCurrent = headBelow
                                                                              , getBelowCurrent = restBelow
                                                                              }
+
 
 moveUp :: Option option => OptionsList option -> OptionsList option
 moveUp options@(OptionList [] [] _ _ _) = options
@@ -113,11 +117,9 @@ terminalDimension dimensionGetter handle = extractDimension <$> hSize handle
 
 hCursorMoveLinewise :: Handle -> Int -> IO ()
 hCursorMoveLinewise handle n
-    | n == 0 = return ()
     | n < 0 = hCursorUpLine handle (-n)
     | n > 0 = hCursorDownLine handle n
-    | otherwise = hCursorDownLine handle n
-
+    | otherwise = return ()
 
 hPrintHelpMessage :: Handle -> String -> IO ()
 hPrintHelpMessage handle message = do
