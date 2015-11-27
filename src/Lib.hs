@@ -6,40 +6,15 @@ import System.Console.ANSI
 import Data.Text.Format
 import System.Console.Terminal.Size
 import Data.Maybe (fromMaybe)
-
-data Option a => OptionsList a = OptionList { getAboveScreen :: [a]
-                                            , getAboveCurrent :: [a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
-                                            , getCurrent :: a
-                                            , getBelowCurrent :: [a]
-                                            , getBelowScreen :: [a]
-                                            } deriving Eq
-
-data Option o => TogglableOption o = TogglableOption o Bool deriving Eq
-
-getOption :: Option o => TogglableOption o -> o
-getOption (TogglableOption o _) = o
-
-class Eq a => Option a where
-    showOption :: a -> String
-    toggle :: a -> a
-
-instance Option String where
-    showOption = id
-    toggle = id
-
-instance Option a => Option (TogglableOption a) where
-    showOption (TogglableOption option False)= " [ ] " ++ showOption option
-    showOption (TogglableOption option True)= " [x] " ++ showOption option
-    toggle (TogglableOption o state) = TogglableOption o $ not state
-
+import Types
 
 oneOf :: Option option => [option] -> IO option
-oneOf lines = getCurrent <$> selectInteractively lines "Use j/k to move and Return to choose."
+oneOf rows = getCurrent <$> selectInteractively rows "Use j/k to move and Return to choose."
 
 
 manyOf :: Option option => [option] -> IO [option]
-manyOf lines = do
-    options <- selectInteractively (map (`TogglableOption` False) lines) "Use j/k to move, Space to toggle and Return to choose."
+manyOf rows = do
+    options <- selectInteractively (map (`TogglableOption` False) rows) "Use j/k to move, Space to toggle and Return to choose."
     return (map getOption (filter isChosen (fromOptions options)))
 
 
