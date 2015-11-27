@@ -18,6 +18,16 @@ manyOf rows = do
     return (map getOption (filter isChosen (fromOptionList options)))
 
 
+tty :: IO Handle
+tty = do
+    handle <- openFile "/dev/tty" ReadWriteMode
+
+    hSetBuffering handle NoBuffering
+    hSetEcho handle False
+
+    return handle
+
+
 selectInteractively :: Option o => [o] -> String -> IO (OptionsList o)
 selectInteractively rows message = do
     handle <- tty
@@ -29,10 +39,6 @@ selectInteractively rows message = do
 
     hClose handle
     return finalOptions
-
-isChosen :: Option o => TogglableOption o -> Bool
-isChosen (TogglableOption _ True) = True
-isChosen (TogglableOption _ False) = False
 
 
 askToChoose :: Option o => Handle -> OptionsList o -> IO (OptionsList o)
@@ -47,29 +53,19 @@ askToChoose handle options = do
 
 
 
-moveDown, moveUp :: Option option => OptionsList option -> OptionsList option
-
+moveDown :: Option option => OptionsList option -> OptionsList option
 moveDown options@(OptionList _ _ _ [] []) = options
 moveDown options@(OptionList _ above current (headBelow:restBelow) _) = options { getAboveCurrent = above ++ [current]
                                                                              , getCurrent = headBelow
                                                                              , getBelowCurrent = restBelow
                                                                              }
 
+moveUp :: Option option => OptionsList option -> OptionsList option
 moveUp options@(OptionList [] [] _ _ _) = options
 moveUp options@(OptionList _ above current below _) = options { getAboveCurrent = init above
-                                                           , getCurrent = last above
-                                                           , getBelowCurrent = current:below
-                                                           }
-
-
-tty :: IO Handle
-tty = do
-    handle <- openFile "/dev/tty" ReadWriteMode
-
-    hSetBuffering handle NoBuffering
-    hSetEcho handle False
-
-    return handle
+                                                              , getCurrent = last above
+                                                              , getBelowCurrent = current:below
+                                                              }
 
 
 -- FIXME: Rewrite after adding VisibleOptions.
@@ -107,7 +103,6 @@ hPrintLine handle highlight option = do
 sgr :: Bool -> SGR
 sgr True = SetSwapForegroundBackground True
 sgr False = Reset
-
 
 
 getTerminalWidth :: Handle -> IO Int

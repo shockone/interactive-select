@@ -26,6 +26,11 @@ instance Option a => Option (TogglableOption a) where
     toggle option = option { getState = not (getState option) }
 
 
+isChosen :: Option o => TogglableOption o -> Bool
+isChosen (TogglableOption _ True) = True
+isChosen (TogglableOption _ False) = False
+
+
 toOptionList :: Option option => [option] -> Int -> OptionsList option
 toOptionList [] _ = undefined -- FIXME: handle this case properly.
 toOptionList options@(headOption:tailOptions) terminalHeight =
