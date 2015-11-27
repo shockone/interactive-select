@@ -2,6 +2,12 @@ A library (and an accompanying binary) that allows to interactively choose some 
 
 ![](https://dl.dropboxusercontent.com/spa/dlqheu39w0arg9q/qni4-rn_.png)
 
+### Install
+
+* Install [stack](https://github.com/commercialhaskell/stack).
+* `cd` into the project directory.
+* `stack install`.
+
 ### Executable
 
 ```
