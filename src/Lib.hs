@@ -36,7 +36,7 @@ oneOf lines = do
     handle <- tty
     hPrintHelpMessage handle "Use j/k to move and Return to choose."
 
-    options <- buildOptions lines <$> getTerminalHeight handle
+    options <- toOptions lines <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
     finalOptions <- askToChoose handle options
@@ -50,7 +50,7 @@ manyOf lines = do
     handle <- tty
     hPrintHelpMessage handle "Use j/k to move, Space to toggle and Return to choose."
 
-    options <- buildOptions (map (`TogglableOption` False) lines) <$> getTerminalHeight handle
+    options <- toOptions (map (`TogglableOption` False) lines) <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
     finalOptions <- askToChoose handle options
@@ -91,9 +91,9 @@ moveUp options@(Options _ above current below _) = options { getAboveCurrent = i
                                                            }
 
 
-buildOptions :: Option option => [option] -> Int -> Options option
-buildOptions [] _ = undefined -- FIXME: handle this case properly.
-buildOptions options@(headOption:tailOptions) terminalHeight =
+toOptions :: Option option => [option] -> Int -> Options option
+toOptions [] _ = undefined -- FIXME: handle this case properly.
+toOptions options@(headOption:tailOptions) terminalHeight =
     Options [] [] headOption (take belowLength tailOptions) (drop belowLength tailOptions)
     where belowLength | length options <= terminalHeight = length options - 1
                       | otherwise                        = terminalHeight - 1
