@@ -35,31 +35,29 @@ instance Option a => Option (TogglableOption a) where
 
 oneOf :: Option option => [option] -> IO option
 oneOf lines = do
-    handle <- tty
-    hPrintHelpMessage handle "Use j/k to move and Return to choose."
-
-    options <- toOptions lines <$> getTerminalHeight handle
-    hPrintOptions handle Nothing options
-
-    finalOptions <- askToChoose handle options
-
-    hClose handle
-    return (getCurrent finalOptions)
+    options <- selectInteractively lines "Use j/k to move and Return to choose."
+    return (getCurrent options)
 
 
 manyOf :: Option option => [option] -> IO [option]
 manyOf lines = do
-    handle <- tty
-    hPrintHelpMessage handle "Use j/k to move, Space to toggle and Return to choose."
+    options <- selectInteractively (map (`TogglableOption` False) lines) "Use j/k to move, Space to toggle and Return to choose."
+    return (map getOption (filter isChosen (fromOptions options)))
 
-    options <- toOptions (map (`TogglableOption` False) lines) <$> getTerminalHeight handle
+
+selectInteractively :: Option o => [o] -> String -> IO (Options o)
+selectInteractively o message = do
+    handle <- tty
+    hPrintHelpMessage handle message
+
+    options <- toOptions o <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
     finalOptions <- askToChoose handle options
 
     hClose handle
 
-    return (map getOption (filter isChosen (fromOptions finalOptions)))
+    return finalOptions
 
 isChosen :: Option o => TogglableOption o -> Bool
 isChosen (TogglableOption _ True) = True
