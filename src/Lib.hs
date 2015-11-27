@@ -69,7 +69,7 @@ askToChoose handle options = do
         'j' -> let nextOptions = moveDown options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
         'k' -> let nextOptions = moveUp options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
         ' ' -> let nextOptions = options { getCurrent = toggle (getCurrent options) } in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
-        '\r' -> hCursorMoveLinewise handle (length (getBelowCurrent options) + 1) >> hSetSGR handle [sgr False] >> return options
+        '\n' -> hCursorMoveLinewise handle (length (getBelowCurrent options) + 1) >> hSetSGR handle [sgr False] >> return options
         _ -> askToChoose handle options
 
 
