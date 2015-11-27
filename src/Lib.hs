@@ -34,9 +34,7 @@ instance Option a => Option (TogglableOption a) where
 
 
 oneOf :: Option option => [option] -> IO option
-oneOf lines = do
-    options <- selectInteractively lines "Use j/k to move and Return to choose."
-    return (getCurrent options)
+oneOf lines = getCurrent <$> selectInteractively lines "Use j/k to move and Return to choose."
 
 
 manyOf :: Option option => [option] -> IO [option]
@@ -46,11 +44,11 @@ manyOf lines = do
 
 
 selectInteractively :: Option o => [o] -> String -> IO (Options o)
-selectInteractively o message = do
+selectInteractively options message = do
     handle <- tty
     hPrintHelpMessage handle message
 
-    options <- toOptions o <$> getTerminalHeight handle
+    options <- toOptions options <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
     finalOptions <- askToChoose handle options
