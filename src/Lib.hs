@@ -34,7 +34,7 @@ selectInteractively rows message = do
     options <- toOptionList rows <$> terminalDimension height handle
 
     hPrintHelpMessage handle message
-    hPrintOptions handle Nothing options
+    hPrintOptionList handle Nothing options
     finalOptions <- askToChoose handle options
 
     hClose handle
@@ -48,20 +48,18 @@ askToChoose handle options = do
         'j'  -> recurse $ moveDown options
         'k'  -> recurse $ moveUp options
         ' '  -> recurse $ options { getCurrent = toggle (getCurrent options) }
-        '\n' -> goToEnd >> resetSGR >> return options
+        '\n' -> goToEnd >> return options
         _ -> askToChoose handle options
-    where recurse nextOptions = hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
+    where recurse nextOptions = hPrintOptionList handle (Just options) nextOptions >> askToChoose handle nextOptions
           goToEnd = hCursorMoveLinewise handle (length (getBelowCurrent options) + 1)
-          resetSGR = hSetSGR handle [sgr False]
-
 
 
 moveDown :: Option option => OptionsList option -> OptionsList option
 moveDown options@(OptionList _ _ _ [] []) = options
 moveDown options@(OptionList _ above current (headBelow:restBelow) _) = options { getAboveCurrent = above ++ [current]
-                                                                             , getCurrent = headBelow
-                                                                             , getBelowCurrent = restBelow
-                                                                             }
+                                                                                , getCurrent = headBelow
+                                                                                , getBelowCurrent = restBelow
+                                                                                }
 
 
 moveUp :: Option option => OptionsList option -> OptionsList option
@@ -72,36 +70,31 @@ moveUp options@(OptionList _ above current below _) = options { getAboveCurrent 
                                                               }
 
 
--- FIXME: Rewrite after adding VisibleOptions.
-hPrintOptions :: Option a
-             => Handle
-             -> Maybe (OptionsList a) -- Current version
-             -> OptionsList a -- Next version
-             -> IO ()
-hPrintOptions handle Nothing (OptionList _ above current below _) = do
-    mapM_ (hPrintLine handle False) above
-    hPrintLine handle True current
-    mapM_ (hPrintLine handle False) below
+hPrintOptionList :: Option a
+                 => Handle
+                 -> Maybe (OptionsList a) -- Current version.
+                 -> OptionsList a -- Next version.
+                 -> IO ()
+hPrintOptionList handle Nothing (OptionList _ above current below _) = do -- Initial render.
+    mapM_ (hPrintOption handle False) above
+    hPrintOption handle True current
+    mapM_ (hPrintOption handle False) below
     hCursorUpLine handle $ length above + length below + 1
-hPrintOptions handle (Just currentOptions) nextOptions
+hPrintOptionList handle (Just currentOptions) nextOptions
     | currentOptions == nextOptions = return ()
-    | otherwise = do
-        hPrintLine handle False (getCurrent currentOptions)
-        hCursorUpLine handle 1
-        hCursorMoveLinewise handle linesToMove
-        hPrintLine handle True (getCurrent nextOptions)
-        hCursorUpLine handle 1
+    | otherwise = reprintOldCurrentLine >> hCursorMoveLinewise handle linesToMove >> reprintNewCurrentLine
     where linesToMove = length (getAboveCurrent nextOptions) - length (getAboveCurrent currentOptions)
+          reprintOldCurrentLine = reprintCurrentLine currentOptions False
+          reprintNewCurrentLine = reprintCurrentLine nextOptions True
+          reprintCurrentLine options highlight = hPrintOption handle highlight (getCurrent options) >> hCursorUpLine handle 1
 
 
-hPrintLine :: Option a => Handle -> Bool -> a -> IO ()
-hPrintLine handle highlight option = do
-    paddedString <- pad handle (showOption option)
+hPrintOption :: Option a => Handle -> Bool -> a -> IO ()
+hPrintOption handle highlight option = do
+    terminalWidth <- terminalDimension width handle
     hSetSGR handle [sgr highlight]
-    hprint handle "{}\n" $ Only paddedString
-    where pad handle string = do
-            terminalWidth <- terminalDimension width handle
-            return (right terminalWidth ' ' string)
+    hprint handle "{}\n" $ Only $ right terminalWidth ' ' (showOption option)
+    hSetSGR handle [sgr False]
 
 
 sgr :: Bool -> SGR

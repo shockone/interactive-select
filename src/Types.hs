@@ -1,7 +1,7 @@
 module Types where
 
 data Option a => OptionsList a = OptionList { getAboveScreen :: [a]
-                                            , getAboveCurrent :: [a] -- FIXME: have a VisibleOptions newtype after changing [] to Traversable.
+                                            , getAboveCurrent :: [a]
                                             , getCurrent :: a
                                             , getBelowCurrent :: [a]
                                             , getBelowScreen :: [a]
