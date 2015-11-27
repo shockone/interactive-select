@@ -31,7 +31,7 @@ tty = do
 selectInteractively :: Option o => [o] -> String -> IO (OptionsList o)
 selectInteractively rows message = do
     handle <- tty
-    options <- toOptionList rows <$> getTerminalHeight handle
+    options <- toOptionList rows <$> terminalDimension height handle
 
     hPrintHelpMessage handle message
     hPrintOptions handle Nothing options
@@ -96,7 +96,7 @@ hPrintLine handle highlight option = do
     hSetSGR handle [sgr highlight]
     hprint handle "{}\n" $ Only paddedString
     where pad handle string = do
-            terminalWidth <- getTerminalWidth handle
+            terminalWidth <- terminalDimension width handle
             return (right terminalWidth ' ' string)
 
 
@@ -105,18 +105,10 @@ sgr True = SetSwapForegroundBackground True
 sgr False = Reset
 
 
-getTerminalWidth :: Handle -> IO Int
-getTerminalWidth handle = extractWidth <$> hSize handle
-    where extractWidth = width . fromMaybe defaultTerminalWindow
-
-
-getTerminalHeight :: Handle -> IO Int
-getTerminalHeight handle = extractHeight <$> hSize handle
-    where extractHeight = height . fromMaybe defaultTerminalWindow
-
-
-defaultTerminalWindow :: Window Int
-defaultTerminalWindow = Window 24 80
+terminalDimension :: (Window Int -> Int) -> Handle -> IO Int
+terminalDimension dimensionGetter handle = extractDimension <$> hSize handle
+    where extractDimension = dimensionGetter . fromMaybe defaultTerminalWindow
+          defaultTerminalWindow = Window 24 80
 
 
 hCursorMoveLinewise :: Handle -> Int -> IO ()
