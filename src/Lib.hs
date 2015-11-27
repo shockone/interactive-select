@@ -15,6 +15,8 @@ data Option a => Options a = Options { getAboveScreen :: [a]
                                      } deriving Eq
 
 data Option o => TogglableOption o = TogglableOption o Bool deriving Eq
+
+getOption :: Option o => TogglableOption o -> o
 getOption (TogglableOption o _) = o
 
 class Eq a => Option a where
@@ -57,7 +59,7 @@ manyOf lines = do
 
     hClose handle
 
-    return (map (\(TogglableOption o c) -> o) (filter isChosen (fromOptions finalOptions)))
+    return (map getOption (filter isChosen (fromOptions finalOptions)))
 
 isChosen :: Option o => TogglableOption o -> Bool
 isChosen (TogglableOption _ True) = True
@@ -139,15 +141,15 @@ hPrintLine handle highlight option = do
     paddedString <- pad handle (showOption option)
     hSetSGR handle [sgr highlight]
     hprint handle "{}\n" $ Only paddedString
+    where pad handle string = do
+            terminalWidth <- getTerminalWidth handle
+            return (right terminalWidth ' ' string)
 
 
 sgr :: Bool -> SGR
 sgr True = SetSwapForegroundBackground True
 sgr False = Reset
 
-pad handle string = do
-    terminalWidth <- getTerminalWidth handle
-    return (right terminalWidth ' ' string)
 
 
 getTerminalWidth :: Handle -> IO Int
@@ -160,6 +162,7 @@ getTerminalHeight handle = extractHeight <$> hSize handle
     where extractHeight = height . fromMaybe defaultTerminalWindow
 
 
+defaultTerminalWindow :: Window Int
 defaultTerminalWindow = Window 24 80
 
 
