@@ -39,10 +39,10 @@ oneOf lines = do
     options <- buildOptions lines <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
-    chosen <- askToChoose handle options
+    finalOptions <- askToChoose handle options
 
     hClose handle
-    return chosen
+    return (getCurrent finalOptions)
 
 
 manyOf :: Option option => [option] -> IO [option]
@@ -53,20 +53,25 @@ manyOf lines = do
     options <- buildOptions (map (`TogglableOption` False) lines) <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
 
-    chosen <- askToChoose handle options
+    finalOptions <- askToChoose handle options
 
     hClose handle
-    return [getOption chosen]
+
+    return (map (\(TogglableOption o c) -> o) (filter isChosen (fromOptions finalOptions)))
+
+isChosen :: Option o => TogglableOption o -> Bool
+isChosen (TogglableOption _ True) = True
+isChosen (TogglableOption _ False) = False
 
 
-askToChoose :: Option o => Handle -> Options o -> IO o
+askToChoose :: Option o => Handle -> Options o -> IO (Options o)
 askToChoose handle options = do
     char <- hGetChar handle
     case char of
         'j' -> let nextOptions = moveDown options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
         'k' -> let nextOptions = moveUp options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
         ' ' -> let nextOptions = options { getCurrent = toggle (getCurrent options) } in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
-        '\r' -> hCursorMoveLinewise handle (length (getBelowCurrent options) + 1) >> hSetSGR handle [sgr False] >> return (getCurrent options)
+        '\r' -> hCursorMoveLinewise handle (length (getBelowCurrent options) + 1) >> hSetSGR handle [sgr False] >> return options
         _ -> askToChoose handle options
 
 
@@ -93,6 +98,9 @@ buildOptions options@(headOption:tailOptions) terminalHeight =
     where belowLength | length options <= terminalHeight = length options - 1
                       | otherwise                        = terminalHeight - 1
 
+
+fromOptions :: Option o => Options (TogglableOption o) -> [TogglableOption o]
+fromOptions (Options aboveScreen above current below belowScreen) = aboveScreen ++ above ++ [current] ++ below ++ belowScreen
 
 tty :: IO Handle
 tty = do
