@@ -1,4 +1,4 @@
-module Lib (oneOf) where
+module Lib (oneOf, manyOf) where
 
 import Prelude
 import System.IO
@@ -14,17 +14,27 @@ data Option a => Options a = Options { getAboveScreen :: [a]
                                      , getBelowScreen :: [a]
                                      } deriving Eq
 
+data Option o => TogglableOption o = TogglableOption o Bool deriving Eq
+getOption (TogglableOption o _) = o
+
 class Eq a => Option a where
     showOption :: a -> String
+    toggle :: a -> a
 
 instance Option String where
     showOption = id
+    toggle = id
+
+instance Option a => Option (TogglableOption a) where
+    showOption (TogglableOption option False)= " [ ] " ++ showOption option
+    showOption (TogglableOption option True)= " [x] " ++ showOption option
+    toggle (TogglableOption o state) = TogglableOption o $ not state
 
 
 oneOf :: Option option => [option] -> IO option
 oneOf lines = do
     handle <- tty
-    hPrintHelpMessage handle
+    hPrintHelpMessage handle "Use j/k to move and Return to choose."
 
     options <- buildOptions lines <$> getTerminalHeight handle
     hPrintOptions handle Nothing options
@@ -35,12 +45,27 @@ oneOf lines = do
     return chosen
 
 
+manyOf :: Option option => [option] -> IO [option]
+manyOf lines = do
+    handle <- tty
+    hPrintHelpMessage handle "Use j/k to move, Space to toggle and Return to choose."
+
+    options <- buildOptions (map (`TogglableOption` False) lines) <$> getTerminalHeight handle
+    hPrintOptions handle Nothing options
+
+    chosen <- askToChoose handle options
+
+    hClose handle
+    return [getOption chosen]
+
+
 askToChoose :: Option o => Handle -> Options o -> IO o
 askToChoose handle options = do
     char <- hGetChar handle
     case char of
         'j' -> let nextOptions = moveDown options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
         'k' -> let nextOptions = moveUp options in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
+        ' ' -> let nextOptions = options { getCurrent = toggle (getCurrent options) } in hPrintOptions handle (Just options) nextOptions >> askToChoose handle nextOptions
         '\r' -> hCursorMoveLinewise handle (length (getBelowCurrent options) + 1) >> hSetSGR handle [sgr False] >> return (getCurrent options)
         _ -> askToChoose handle options
 
@@ -138,7 +163,8 @@ hCursorMoveLinewise handle n
     | otherwise = hCursorDownLine handle n
 
 
-hPrintHelpMessage handle = do
+hPrintHelpMessage :: Handle -> String -> IO ()
+hPrintHelpMessage handle message = do
     hSetSGR handle [SetColor Foreground Dull Yellow]
-    hPutStrLn handle "Use j/k to move and Return to choose"
+    hPutStrLn handle message
     hSetSGR handle [Reset]
