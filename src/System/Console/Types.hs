@@ -1,4 +1,4 @@
-module Types where
+module System.Console.Types where
 
 data Option a => OptionsList a = OptionList { getAboveScreen :: [a]
                                             , getAboveCurrent :: [a]

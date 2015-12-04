@@ -15,8 +15,8 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
-                     , Types
+  exposed-modules:     System.Console.InteractiveSelect
+                     , System.Console.Types
   build-depends:       base >= 4.7 && < 5
                      , ansi-terminal
                      , text-format

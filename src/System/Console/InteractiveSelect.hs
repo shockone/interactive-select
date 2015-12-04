@@ -1,4 +1,4 @@
-module Lib (oneOf, manyOf) where
+module System.Console.InteractiveSelect (oneOf, manyOf) where
 
 import Prelude
 import System.IO
@@ -6,7 +6,7 @@ import System.Console.ANSI
 import Data.Text.Format
 import System.Console.Terminal.Size
 import Data.Maybe (fromMaybe)
-import Types
+import System.Console.Types
 
 oneOf :: Option option => [option] -> IO option
 oneOf rows = getCurrent <$> selectInteractively rows "Use j/k to move and Return to choose."

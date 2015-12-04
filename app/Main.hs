@@ -1,7 +1,7 @@
 module Main where
 
 import Options.Applicative
-import Lib
+import System.Console.InteractiveSelect
 
 data Mode = One | Many
 
