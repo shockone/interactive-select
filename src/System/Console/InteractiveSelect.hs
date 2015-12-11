@@ -9,6 +9,7 @@ import Data.Maybe (fromMaybe)
 import System.Console.Types
 
 oneOf :: Option option => [option] -> IO option
+oneOf [row] = return row
 oneOf rows = getCurrent <$> selectInteractively rows "Use j/k to move and Return to choose."
 
 
