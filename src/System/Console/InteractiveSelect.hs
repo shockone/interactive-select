@@ -10,7 +10,7 @@ import System.Console.Types
 
 oneOf :: Option option => [option] -> IO option
 oneOf [row] = return row
-oneOf rows = getCurrent <$> selectInteractively rows "Use j/k to move and Return to choose."
+oneOf rows = current <$> selectInteractively rows "Use j/k to move and Return to choose."
 
 
 manyOf :: Option option => [option] -> IO [option]
@@ -48,26 +48,26 @@ askToChoose handle options = do
     case char of
         'j'  -> recurse $ moveDown options
         'k'  -> recurse $ moveUp options
-        ' '  -> recurse $ options { getCurrent = toggle (getCurrent options) }
+        ' '  -> recurse $ options { current = toggle (current options) }
         '\n' -> goToEnd >> return options
         _ -> askToChoose handle options
     where recurse nextOptions = hPrintOptionList handle (Just options) nextOptions >> askToChoose handle nextOptions
-          goToEnd = hCursorMoveLinewise handle (length (getBelowCurrent options) + 1)
+          goToEnd = hCursorMoveLinewise handle (length (below options) + 1)
 
 
 moveDown :: Option option => OptionsList option -> OptionsList option
 moveDown options@(OptionList _ _ _ [] []) = options
-moveDown options@(OptionList _ above current (headBelow:restBelow) _) = options { getAboveCurrent = above ++ [current]
-                                                                                , getCurrent = headBelow
-                                                                                , getBelowCurrent = restBelow
+moveDown options@(OptionList _ above current (headBelow:restBelow) _) = options { above = above ++ [current]
+                                                                                , current = headBelow
+                                                                                , below = restBelow
                                                                                 }
 
 
 moveUp :: Option option => OptionsList option -> OptionsList option
 moveUp options@(OptionList [] [] _ _ _) = options
-moveUp options@(OptionList _ above current below _) = options { getAboveCurrent = init above
-                                                              , getCurrent = last above
-                                                              , getBelowCurrent = current:below
+moveUp options@(OptionList _ above current below _) = options { above = init above
+                                                              , current = last above
+                                                              , below = current:below
                                                               }
 
 
@@ -84,10 +84,10 @@ hPrintOptionList handle Nothing (OptionList _ above current below _) = do -- Ini
 hPrintOptionList handle (Just currentOptions) nextOptions
     | currentOptions == nextOptions = return ()
     | otherwise = reprintOldCurrentLine >> hCursorMoveLinewise handle linesToMove >> reprintNewCurrentLine
-    where linesToMove = length (getAboveCurrent nextOptions) - length (getAboveCurrent currentOptions)
+    where linesToMove = length (above nextOptions) - length (above currentOptions)
           reprintOldCurrentLine = reprintCurrentLine currentOptions False
           reprintNewCurrentLine = reprintCurrentLine nextOptions True
-          reprintCurrentLine options highlight = hPrintOption handle highlight (getCurrent options) >> hCursorUpLine handle 1
+          reprintCurrentLine options highlight = hPrintOption handle highlight (current options) >> hCursorUpLine handle 1
 
 
 hPrintOption :: Option a => Handle -> Bool -> a -> IO ()

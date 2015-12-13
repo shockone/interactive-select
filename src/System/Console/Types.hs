@@ -1,10 +1,10 @@
 module System.Console.Types where
 
-data Option a => OptionsList a = OptionList { getAboveScreen :: [a]
-                                            , getAboveCurrent :: [a]
-                                            , getCurrent :: a
-                                            , getBelowCurrent :: [a]
-                                            , getBelowScreen :: [a]
+data Option a => OptionsList a = OptionList { aboveScreen :: [a]
+                                            , above :: [a]
+                                            , current :: a
+                                            , below :: [a]
+                                            , belowScreen :: [a]
                                             } deriving Eq
 
 data Option o => TogglableOption o = TogglableOption { getOption :: o
