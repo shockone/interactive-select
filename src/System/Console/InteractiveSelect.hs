@@ -9,16 +9,13 @@ import System.Console.Types
 
 oneOf :: Option option => [option] -> Maybe String -> IO option
 oneOf [row] _ = return row
-oneOf rows message = do
-    printTitle message
-    current <$> selectInteractively rows "Use j/k to move and Return to choose."
+oneOf rows title = current <$> selectInteractively rows title "Use j/k to move and Return to choose."
 
 
 manyOf :: Option option => [option] -> Maybe String -> IO [option]
 manyOf [] _ = return []
-manyOf rows message = do
-    printTitle message
-    options <- selectInteractively (map (`TogglableOption` False) rows) "Use j/k to move, Space to toggle and Return to choose."
+manyOf rows title = do
+    options <- selectInteractively (map (`TogglableOption` False) rows) title "Use j/k to move, Space to toggle and Return to choose."
     return (map getOption (filter isChosen (fromOptionList options)))
 
 
@@ -32,12 +29,14 @@ tty = do
     return handle
 
 
-selectInteractively :: Option o => [o] -> String -> IO (OptionsList o)
-selectInteractively rows message = do
+selectInteractively :: Option o => [o] -> Maybe String -> String -> IO (OptionsList o)
+selectInteractively rows title keyBindingsMessage = do
     handle <- tty
-    options <- toOptionList rows <$> terminalDimension height handle
 
-    hPrintHelpMessage handle message
+    hPrintTitle handle title
+    hPrintHelpMessage handle keyBindingsMessage
+
+    options <- toOptionList rows <$> terminalDimension height handle
     hPrintOptionList handle Nothing options
     finalOptions <- askToChoose handle options
 
@@ -120,11 +119,14 @@ hCursorMoveLinewise handle n
 
 hPrintHelpMessage :: Handle -> String -> IO ()
 hPrintHelpMessage handle message = do
-    hSetSGR handle [SetColor Foreground Dull Yellow]
+    hSetSGR handle [SetColor Foreground Vivid Black]
     hPutStrLn handle message
     hSetSGR handle [Reset]
 
 
-printTitle :: Maybe String -> IO ()
-printTitle (Just title) = putStrLn title
-printTitle _ = return ()
+hPrintTitle :: Handle -> Maybe String -> IO ()
+hPrintTitle handle (Just title) = do
+    hSetSGR handle [SetColor Foreground Dull Yellow]
+    hPutStrLn handle title
+    hSetSGR handle [Reset]
+hPrintTitle _ _ = return ()
