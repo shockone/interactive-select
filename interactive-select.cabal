@@ -22,7 +22,7 @@ library
                      , text-format
                      , terminal-size
   default-language:    Haskell2010
-  default-extensions:  OverloadedStrings, TypeSynonymInstances, FlexibleInstances, GADTs
+  default-extensions:  OverloadedStrings, TypeSynonymInstances, FlexibleInstances, GADTs, RecordWildCards
   ghc-options:         -Wall -fno-warn-name-shadowing -O3
 
 executable interactive-select

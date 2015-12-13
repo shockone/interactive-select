@@ -65,10 +65,10 @@ moveDown options@(OptionList _ above current (headBelow:restBelow) _) = options 
 
 moveUp :: Option option => OptionsList option -> OptionsList option
 moveUp options@(OptionList [] [] _ _ _) = options
-moveUp options@(OptionList _ above current below _) = options { above = init above
-                                                              , current = last above
-                                                              , below = current:below
-                                                              }
+moveUp options@(OptionList{..}) = options { above = init above
+                                          , current = last above
+                                          , below = current:below
+                                          }
 
 
 hPrintOptionList :: Option a
