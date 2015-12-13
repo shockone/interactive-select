@@ -1,6 +1,5 @@
 module System.Console.InteractiveSelect (oneOf, manyOf) where
 
-import Prelude
 import System.IO
 import System.Console.ANSI
 import Data.Text.Format
@@ -8,13 +7,17 @@ import System.Console.Terminal.Size
 import Data.Maybe (fromMaybe)
 import System.Console.Types
 
-oneOf :: Option option => [option] -> IO option
-oneOf [row] = return row
-oneOf rows = current <$> selectInteractively rows "Use j/k to move and Return to choose."
+oneOf :: Option option => [option] -> Maybe String -> IO option
+oneOf [row] _ = return row
+oneOf rows message = do
+    printTitle message
+    current <$> selectInteractively rows "Use j/k to move and Return to choose."
 
 
-manyOf :: Option option => [option] -> IO [option]
-manyOf rows = do
+manyOf :: Option option => [option] -> Maybe String -> IO [option]
+manyOf [] _ = return []
+manyOf rows message = do
+    printTitle message
     options <- selectInteractively (map (`TogglableOption` False) rows) "Use j/k to move, Space to toggle and Return to choose."
     return (map getOption (filter isChosen (fromOptionList options)))
 
@@ -120,3 +123,8 @@ hPrintHelpMessage handle message = do
     hSetSGR handle [SetColor Foreground Dull Yellow]
     hPutStrLn handle message
     hSetSGR handle [Reset]
+
+
+printTitle :: Maybe String -> IO ()
+printTitle (Just title) = putStrLn title
+printTitle _ = return ()

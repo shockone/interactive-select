@@ -18,5 +18,5 @@ parserInfo = info (helper <*> parser) description
 
 
 select :: Mode -> [String] -> IO ()
-select One rows = oneOf rows >>= putStrLn
-select Many rows = manyOf rows >>= mapM_ putStrLn
+select One rows = oneOf rows Nothing >>= putStrLn
+select Many rows = manyOf rows Nothing >>= mapM_ putStrLn
