@@ -20,18 +20,18 @@ manyOf rows title = do
 
 
 tty :: IO Handle
-tty = do
-    handle <- openFile "/dev/tty" ReadWriteMode
-
-    hSetBuffering handle NoBuffering
-    hSetEcho handle False
-
-    return handle
+tty = openFile "/dev/tty" ReadWriteMode
 
 
 selectInteractively :: Option o => [o] -> Maybe String -> String -> IO (OptionsList o)
 selectInteractively rows title keyBindingsMessage = do
     handle <- tty
+
+    buffering <- hGetBuffering handle
+    echo <- hGetEcho handle
+
+    hSetBuffering handle NoBuffering
+    hSetEcho handle False
 
     hPrintTitle handle title
     hPrintHelpMessage handle keyBindingsMessage
@@ -39,6 +39,9 @@ selectInteractively rows title keyBindingsMessage = do
     options <- toOptionList rows <$> terminalDimension height handle
     hPrintOptionList handle Nothing options
     finalOptions <- askToChoose handle options
+
+    hSetBuffering handle buffering
+    hSetEcho handle echo
 
     hClose handle
     return finalOptions
